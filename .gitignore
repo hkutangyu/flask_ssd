@@ -105,3 +105,4 @@ keras1_tf1/
 upload/
 result/
 unknown/
+weights*
