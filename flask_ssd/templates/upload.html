@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta charset="utf-8" />
+        <br><br>
+        <title>LOGO原始样本数据增广页面</title>
+        <!-- Bootstrap -->
+        <link href="{{ url_for('.static', filename='bootstrap/css/bootstrap.min.css') }}" rel="stylesheet" media="screen">
+        <!--<link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen"> -->
+    </head>
+
+    <body>
+        <blockquote class="text-center">
+            <p>请将LOGO样本放到对应的文件夹中，然后将文件夹压缩为rar文件再上传到服务器中.</p>
+            <br>
+            <p>待服务器对样本进行虚拟增加后，会让用户下载新产生的样本库</p>
+        </blockquote>
+        <form action="upload" method="post" enctype="multipart/form-data" class="text-center">
+            <input type="file" name="file" class="btn icon-file"/>
+            <br><br>
+            <input type="submit" value="上传" class="btn btn-primary"/>
+        </form>
+        <script src="http://code.jquery.com/jquery.js"></script>
+        <script src="{{ url_for('.static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+    </body>

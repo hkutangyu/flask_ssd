@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# my env
+keras1_tf1/
+upload/
+result/
+unknown/
