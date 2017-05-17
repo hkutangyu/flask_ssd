@@ -106,3 +106,4 @@ upload/
 result/
 unknown/
 weights*
+tmp/
