@@ -5,7 +5,8 @@ import urllib
 import os
 import pickle
 import tensorflow as tf
-import os
+_ = tf.contrib.tensor_forest
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import keras
 from keras.applications.imagenet_utils import preprocess_input
 from keras.backend.tensorflow_backend import set_session
@@ -14,56 +15,46 @@ from keras.preprocessing import image
 import numpy as np
 from scipy.misc import imread
 
-from flask_ssd.ssd_keras.ssd import SSD300
-from flask_ssd.ssd_keras.ssd_utils import BBoxUtility
+from ssd_keras.ssd import SSD300
+from ssd_keras.ssd_utils import BBoxUtility
 from PIL import Image, ImageDraw
-from keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
-
+import zipfile
 app = Flask(__name__)
 
-# global variable
-webapp_path = '/var/www/flask_ssd/flask_ssd'
-unknown_folder_path = os.path.join(webapp_path, 'unknown')
-result_folder_path = os.path.join(webapp_path, 'result')
-upload_folder_path = os.path.join(webapp_path, 'upload')
-temp_folder_path = os.path.join(webapp_path, 'tmp')
+app.config['UPLOAD_FOLDER'] = os.getcwd()+'\\uploads'
 
-# load logo classes file
-brand_dict = pickle.load(open(os.path.join(webapp_path, 'brand_map.pkl'), 'rb'))
+unknown_folderpath = os.getcwd()+'\\unknown'
+result_folderpath = os.getcwd()+'\\result'
+temp_filepath = os.getcwd()+'\\tmp'
+
+# These are the extension that we are accepting to be uploaded
+app.config['ALLOWED_EXTENSIONS'] = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+brand_dict = pickle.load(open('brand_map.pkl', 'rb'))
 print(brand_dict)
+#NUM_CLASSES = 27
+#NUM_CLASSES = 30 # actual class + 1
+NUM_CLASSES = len(brand_dict) + 1
 
-NUM_CLASSES = len(brand_dict) + 1  # NUM_CLASS equal real class numbers + 1
-
-# init a model
 input_shape = (300, 300, 3)
 model = SSD300(input_shape, num_classes=NUM_CLASSES)
-chk_path = os.path.join(webapp_path, "checkpoints")
-
-#load weights from *.hdf5 file
+chk_path = "./checkpoints"
+# model.load_weights('weights_SSD300.hdf5', by_name=True)
+#model.load_weights('./checkpoints/weights.29-4.12.hdf5', by_name=True)
+#model.load_weights('./checkpoints/weights.19-1.97.hdf5', by_name=True)
+#model.load_weights('./checkpoints/weights.29-2.15.hdf5', by_name=True)
+#model.load_weights('./checkpoints/weights.29-1.83.hdf5', by_name=True)
 for f in os.listdir(chk_path):
     if ".hdf5" in f:
         model.load_weights(os.path.join(chk_path, f), by_name=True)
-        break
+
+
 
 bbox_util = BBoxUtility(NUM_CLASSES)
 
-# define image generator
-datagen = ImageDataGenerator(
-    rotation_range=270,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    rescale=1./255,
-    shear_range=0.2,
-    zoom_range=0.2,
-    fill_mode='nearest'
-)
-
-# get file basename and extension
 def get_file_name_ext(filename):
     (filepath, tempfilename) = os.path.split(filename);
-    (basename, extension) = os.path.splitext(tempfilename)
-    return basename, extension
-
+    (shotname, extension) = os.path.splitext(tempfilename)
+    return shotname,extension
 
 def get_image_class_from_local_file(filename):
     inputs = []
@@ -75,6 +66,7 @@ def get_image_class_from_local_file(filename):
     inputs = preprocess_input(np.array(inputs))
     preds = model.predict(inputs, batch_size=1)
     results = bbox_util.detection_out(preds)
+    
 
     # Parse the outputs.
     det_label = results[0][:, 0]
@@ -87,6 +79,7 @@ def get_image_class_from_local_file(filename):
     # Get detections with confidence higher than 0.6.
     top_indices = [i for i, conf in enumerate(det_conf) if conf >= 0.5]
     ret_dict = {"recResult": [], "message": "success"}
+
 
     if len(top_indices) > 0:
         rec_list = []
@@ -123,28 +116,57 @@ def get_image_class_from_local_file(filename):
             if act_score > max_score:
                 max_score_label = label_name
                 max_score = act_score
-            # print(display_txt)
+            #print(display_txt)
             draw.rectangle((xmin * width_ratio, ymin * height_ratio, xmax * width_ratio, ymax * height_ratio))
             draw.text((xmin * width_ratio, ymin * height_ratio), display_txt)
 
         filename = os.path.basename(filename)
         (shortname, extname) = get_file_name_ext(filename)
         im = im.convert('RGB')
-        im.save(os.path.join(result_folder_path, max_score_label + "-" + shortname + ".jpg"))
-
+        im.save(os.path.join(result_folderpath, max_score_label+"-"+shortname + ".jpg"))
+            
         ret_dict["recResult"] = rec_list
     else:
         im = Image.open(filename)
-        im = im.convert('RGB')
         (shortname, extname) = get_file_name_ext(filename)
-        filename = os.path.join(unknown_folder_path, shortname + ".jpg")
+
+        filename = unknown_folderpath + "\\" + shortname + ".jpg"
+
         im.save(filename)
     return json.dumps(ret_dict)
 
+# For a given file, return whether it's an allowed type or not
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in app.config['ALLOWED_EXTENSIONS']
 
-@app.route("/")
-def hello():
-    return "Welcome to id-bear logo recognition system! NUM_CLASS={0}, {1}".format(NUM_CLASSES, brand_dict)
+@app.route('/upload', methods=['GET','POST'])
+def logo_upload():
+    if request.method == 'GET':
+        return render_template('upload.html')
+    elif request.method == 'POST':
+        f = request.files['file']
+        fname = f.filename
+        file_full_path = os.path.join(temp_filepath, fname)
+        f.save(file_full_path)
+        
+        # uncompress
+        zfile = zipfile.ZipFile(file_full_path, 'r') 
+        for p in zfile.namelist():
+            if p.endswith('/'):
+                full_p = os.path.join(temp_filepath, p)
+                if not os.path.exists(full_p):
+                    os.mkdir(full_p)
+            else:
+                full_p = os.path.join(temp_filepath, p)
+                open(full_p, 'wb').write(zfile.read(full_p)) 
+        return "Upload OK"
+        
+        
+           
+@app.route('/')
+def hello_world():
+    return redirect("https://www.showdoc.cc/15504?page_id=140847")
 
 
 @app.route('/api/get_image_class_file', methods=['POST'])
@@ -160,21 +182,17 @@ def api_get_image_class_file():
             # Move the file form the temporal folder to
             # the upload folder we setup
             filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S')+'-'+filename
-            image_path = os.path.join(upload_folder_path, filename)
-            file.save(image_path)
-
-            # force img to rgb format
-            (shortname, extname) = get_file_name_ext(image_path)
-            im = Image.open(image_path)
-            im = im.convert('RGB')
-            jpg_image_path = os.path.join(upload_folder_path, shortname + ".jpg")
-            im.save(jpg_image_path)
-
-            ret = get_image_class_from_local_file(jpg_image_path)
+            filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filename)
+            ret = get_image_class_from_local_file(filename)
             # if upload picture is not jpg format, then convert its format to jpg
+            (shortname, extname) = get_file_name_ext(filename)
 
-            if '.jpg' not in extname:
-                os.remove(image_path)
+            if extname != ".jpg":
+                im = Image.open(filename)
+                im = im.convert('RGB')
+                im.save(os.path.join(app.config['UPLOAD_FOLDER'], shortname + ".jpg"))
+                os.remove(filename)
             return ret
         else:
             ret_dict = {"message": "file is empty"}
@@ -184,27 +202,38 @@ def api_get_image_class_file():
         return json.dumps(ret_dict)
 
 
-@app.route('/get_augment_result', methods=['GET', 'POST'])
-def logo_upload():
-    if request.method == 'GET':
-        return render_template('get_augment_result.html')
-    elif request.method == 'POST':
-        f = request.files['file']
-        if f:
-            fname = f.filename
-            file_full_path = os.path.join(temp_folder_path, fname)
-            f.save(file_full_path)
+@app.route('/api/get_image_class', methods=['POST'])
+def api_get_image_class():
+    image_url = request.form['imageUrl']
+    filename = os.path.basename(image_url)
+    urllib.request.urlretrieve(image_url, filename)
+    ret = get_image_class_from_local_file(filename)
+    return ret
 
-            # uncompress
-            unzip_cmd = 'unzip ' + file_full_path + ' -d '+temp_folder_path
-            os.system(unzip_cmd)
 
-            # augmentation
-
+@app.route('/api/get_image_class_json', methods=['POST'])
+def api_get_image_class_json():
+    if request.headers['Content-Type'] == 'text/plain':
+        ret_dict = {"message": "please set the correct Content-Type"}
+        return json.dumps(ret_dict)
+    elif request.headers['Content-Type'] == 'application/json':
+        if request.is_json:  # if pass json from caller
+            req_dict = eval(json.dumps(request.json))
+            if('imageUrl' in req_dict):  # start process image
+                filename = os.path.basename(req_dict['imageUrl'] )
+                urllib.request.urlretrieve(req_dict['imageUrl'], filename)
+                ret = get_image_class_from_local_file(filename)
+                return ret
+            else:
+                ret_dict = {"recResult": [], "message": "you pass a wrong key"}
+                return json.dumps(ret_dict)
         else:
-            return render_template('get_augment_result.html')
-    return "upload successfully"
+            ret_dict = {"recResult": [], "message": "please use json format"}
+            return json.dumps(ret_dict)
+    else:
+        ret_dict = {"recResult": [], "message": "please use json format"}
+        return json.dumps(ret_dict)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run()
