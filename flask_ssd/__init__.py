@@ -23,10 +23,11 @@ app = Flask(__name__)
 
 # global variable
 webapp_path = '/var/www/flask_ssd/flask_ssd'
-unknown_folder_path = os.path.join(webapp_path, 'unknown')
-result_folder_path = os.path.join(webapp_path, 'result')
-upload_folder_path = os.path.join(webapp_path, 'upload')
-temp_folder_path = os.path.join(webapp_path, 'tmp')
+file_db_path = '/home/tangyu/ssd_db'
+unknown_folder_path = os.path.join(file_db_path, 'unknown')
+result_folder_path = os.path.join(file_db_path, 'result')
+upload_folder_path = os.path.join(file_db_path, 'upload')
+temp_folder_path = os.path.join(file_db_path, 'tmp')
 
 # load logo classes file
 brand_dict = pickle.load(open(os.path.join(webapp_path, 'brand_map.pkl'), 'rb'))
