@@ -76,7 +76,7 @@ def get_image_class_from_local_file(filename):
     preds = model.predict(inputs, batch_size=1)
     results = bbox_util.detection_out(preds)
     ret_dict = {"recResult": [], "message": "success"}
-    if not results[0] or len(results[0]) < 1:
+    if len(results[0]) < 1:
         return json.dumps(ret_dict)
     # Parse the outputs.
     print(results)
