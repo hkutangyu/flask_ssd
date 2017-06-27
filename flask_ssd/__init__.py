@@ -18,7 +18,6 @@ from flask_ssd.ssd_keras.ssd import SSD300
 from flask_ssd.ssd_keras.ssd_utils import BBoxUtility
 from PIL import Image, ImageDraw
 from keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
-
 app = Flask(__name__)
 
 # global variable
@@ -76,8 +75,11 @@ def get_image_class_from_local_file(filename):
     inputs = preprocess_input(np.array(inputs))
     preds = model.predict(inputs, batch_size=1)
     results = bbox_util.detection_out(preds)
-
+    ret_dict = {"recResult": [], "message": "success"}
+    if not results[0] or len(results[0]) < 1:
+        return json.dumps(ret_dict)
     # Parse the outputs.
+    print(results)
     det_label = results[0][:, 0]
     det_conf = results[0][:, 1]
     det_xmin = results[0][:, 2]
@@ -86,8 +88,8 @@ def get_image_class_from_local_file(filename):
     det_ymax = results[0][:, 5]
 
     # Get detections with confidence higher than 0.6.
-    top_indices = [i for i, conf in enumerate(det_conf) if conf >= 0.5]
-    ret_dict = {"recResult": [], "message": "success"}
+    top_indices = [i for i, conf in enumerate(det_conf) if conf >= 0.4]
+
 
     if len(top_indices) > 0:
         rec_list = []
