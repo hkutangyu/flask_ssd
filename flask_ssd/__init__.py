@@ -88,7 +88,7 @@ def get_image_class_from_local_file(filename):
     det_ymax = results[0][:, 5]
 
     # Get detections with confidence higher than 0.6.
-    top_indices = [i for i, conf in enumerate(det_conf) if conf >= 0.4]
+    top_indices = [i for i, conf in enumerate(det_conf) if conf >= 0.52]
 
 
     if len(top_indices) > 0:
