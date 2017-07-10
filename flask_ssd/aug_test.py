@@ -4,15 +4,15 @@ from PIL import Image
 import math
 
 # global variables
-target_img_num = 50
+target_img_num = 250
 width_threshold = 900
 aug_db_path = '/var/www/flask_ssd/flask_ssd/tmp'
 
 # define image generator
 datagen = ImageDataGenerator(
     rotation_range=270,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
+    width_shift_range=0.01,
+    height_shift_range=0.01,
     rescale=1./255,
     shear_range=0.2,
     zoom_range=0.2,
@@ -75,4 +75,5 @@ def aug_folder(org_folder_path):
 #aug_folder('/var/www/flask_ssd/flask_ssd/tmp/ERKE')
 
 for f_name in os.listdir(aug_db_path):
+    print(f_name)
     aug_folder(os.path.join(aug_db_path, f_name))

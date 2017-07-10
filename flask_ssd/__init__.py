@@ -170,9 +170,16 @@ def api_get_image_class_file():
             (shortname, extname) = get_file_name_ext(image_path)
             im = Image.open(image_path)
             im = im.convert('RGB')
+            w, h = im.size
             jpg_image_path = os.path.join(upload_folder_path, shortname + ".jpg")
+            # if w != h:
+            #     max_wh = max([w, h])
+            #     newImg = Image.new("RGB", (max_wh, max_wh), (255, 255, 255))
+            #     newImg.paste(im, (0, 0, w, h))
+            #     newImg.save(jpg_image_path)
+            # else:
+            #     im.save(jpg_image_path)
             im.save(jpg_image_path)
-
             ret = get_image_class_from_local_file(jpg_image_path)
             # if upload picture is not jpg format, then convert its format to jpg
 
