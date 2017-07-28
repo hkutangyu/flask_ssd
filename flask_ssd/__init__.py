@@ -18,6 +18,9 @@ from flask_ssd.ssd_keras.ssd import SSD300
 from flask_ssd.ssd_keras.ssd_utils import BBoxUtility
 from PIL import Image, ImageDraw
 from keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
+from flask_ssd.object_detect_lib import ObjectDetectSsd
+
+
 app = Flask(__name__)
 
 # global variable
@@ -58,11 +61,40 @@ datagen = ImageDataGenerator(
     fill_mode='nearest'
 )
 
+obd = ObjectDetectSsd(path_to_ckpt='/var/www/flask_ssd/flask_ssd/ssd_inception_v2_logo_inference_graph.pb')
+labels_tensorflow = []
+with open('/var/www/flask_ssd/flask_ssd/logo_filter.json', mode='r', encoding='utf-8') as f:
+    labels_tensorflow = json.load(f, encoding='utf-8')
+
 # get file basename and extension
 def get_file_name_ext(filename):
     (filepath, tempfilename) = os.path.split(filename);
     (basename, extension) = os.path.splitext(tempfilename)
     return basename, extension
+
+
+def get_image_class_by_tensorflow(image_path):
+    boxes, scores, classes, num_detections = obd.detect_single_image(image_path=image_path)
+    recResult = []
+    if len(labels_tensorflow) > 0:
+        if num_detections > 0:
+            print(num_detections)
+            score = scores[0]
+            box = boxes[0]
+            logo_classes = classes[0]
+            for s,b,l in zip(score, box, logo_classes):
+                sscore = s * 100
+                if sscore > 50:
+                    single_dict = {'score': sscore,
+                                   'tlX': float(b[0]),
+                                   'tlY': float(b[1]),
+                                   'brX': float(b[2]),
+                                   'brY': float(b[3]),
+                                   'imageClass': labels_tensorflow[int(l) - 1]}
+                    recResult.append(single_dict)
+    return recResult
+
+
 
 
 def get_image_class_from_local_file(filename):
@@ -79,7 +111,6 @@ def get_image_class_from_local_file(filename):
     if len(results[0]) < 1:
         return json.dumps(ret_dict)
     # Parse the outputs.
-    print(results)
     det_label = results[0][:, 0]
     det_conf = results[0][:, 1]
     det_xmin = results[0][:, 2]
@@ -150,6 +181,39 @@ def hello():
     return "Welcome to id-bear logo recognition system! NUM_CLASS={0}, {1}".format(NUM_CLASSES, brand_dict)
 
 
+@app.route('/api/get_image_class_tensorflow', methods=['POST'])
+def api_get_image_class_tensorflow():
+    file = request.files['file']
+    if file:
+        print(file.filename)
+        filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '-' + file.filename
+        image_path = os.path.join(upload_folder_path, filename)
+        file.save(image_path)
+
+        # force img to rgb format
+        (shortname, extname) = get_file_name_ext(image_path)
+        im = Image.open(image_path)
+        im = im.convert('RGB')
+        jpg_image_path = os.path.join(upload_folder_path, shortname + ".jpg")
+        im.save(jpg_image_path)
+        recResult = get_image_class_by_tensorflow(image_path=jpg_image_path)
+        print(recResult)
+        ret_dict = {"message": "success", "recResult": recResult}
+        return json.dumps(ret_dict)
+    else:
+        ret_dict = {"message": "file is empty"}
+        return json.dumps(ret_dict)
+
+@app.route('/api/get_image_class_url', methods=['GET'])
+def api_get_image_class_url():
+    image_url = request.args.get('image_url', None)
+    if image_url:
+        filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.jpg'
+        image_path = os.path.join(upload_folder_path, filename)
+        urllib.request.urlretrieve(image_url, image_path)
+        ret = get_image_class_from_local_file(image_path)
+        return ret
+
 @app.route('/api/get_image_class_file', methods=['POST'])
 def api_get_image_class_file():
     if "multipart/form-data" in request.headers['Content-Type']:
@@ -217,4 +281,4 @@ def logo_upload():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port='4000')
