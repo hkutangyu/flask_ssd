@@ -207,11 +207,15 @@ def api_get_image_class_tensorflow():
 @app.route('/api/get_image_class_url', methods=['GET'])
 def api_get_image_class_url():
     image_url = request.args.get('image_url', None)
+    model_name = request.args.get('model_name', 'id-bear')
     if image_url:
         filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.jpg'
         image_path = os.path.join(upload_folder_path, filename)
         urllib.request.urlretrieve(image_url, image_path)
-        ret = get_image_class_from_local_file(image_path)
+        if model_name == 'id-bear':
+            ret = get_image_class_from_local_file(image_path)
+        elif model_name == 'kingglory':
+            ret = get_image_class_by_tensorflow(image_path=image_path)
         return ret
 
 @app.route('/api/get_image_class_file', methods=['POST'])
