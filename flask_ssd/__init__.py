@@ -13,6 +13,7 @@ from keras.models import Model
 from keras.preprocessing import image
 import numpy as np
 from scipy.misc import imread
+import shutil
 
 from flask_ssd.ssd_keras.ssd import SSD300
 from flask_ssd.ssd_keras.ssd_utils import BBoxUtility
@@ -197,7 +198,14 @@ def api_get_image_class_tensorflow():
         jpg_image_path = os.path.join(upload_folder_path, shortname + ".jpg")
         im.save(jpg_image_path)
         recResult = get_image_class_by_tensorflow(image_path=jpg_image_path)
-        print(recResult)
+        jpg_basename = os.path.basename(jpg_image_path)
+        if recResult:
+            rec_basename = os.path.splitext(jpg_basename) + '-' + recResult[0].get('imageClass') + '.jpg'
+            rec_path = os.path.join(result_folder_path, rec_basename)
+            shutil.copy(jpg_image_path, rec_path)
+        else:
+            shutil.copy(jpg_image_path, os.path.join(unknown_folder_path, jpg_basename))
+
         ret_dict = {"message": "success", "recResult": recResult}
         return json.dumps(ret_dict)
     else:
