@@ -93,6 +93,13 @@ def get_image_class_by_tensorflow(image_path):
                                    'brY': float(b[3]),
                                    'imageClass': labels_tensorflow[int(l) - 1]}
                     recResult.append(single_dict)
+    jpg_basename = os.path.basename(image_path)
+    if recResult:
+        rec_basename = os.path.splitext(jpg_basename) + '-' + recResult[0].get('imageClass') + '.jpg'
+        rec_path = os.path.join(result_folder_path, rec_basename)
+        shutil.copy(image_path, rec_path)
+    else:
+        shutil.copy(image_path, os.path.join(unknown_folder_path, jpg_basename))
     return recResult
 
 
@@ -198,13 +205,7 @@ def api_get_image_class_tensorflow():
         jpg_image_path = os.path.join(upload_folder_path, shortname + ".jpg")
         im.save(jpg_image_path)
         recResult = get_image_class_by_tensorflow(image_path=jpg_image_path)
-        jpg_basename = os.path.basename(jpg_image_path)
-        if recResult:
-            rec_basename = os.path.splitext(jpg_basename) + '-' + recResult[0].get('imageClass') + '.jpg'
-            rec_path = os.path.join(result_folder_path, rec_basename)
-            shutil.copy(jpg_image_path, rec_path)
-        else:
-            shutil.copy(jpg_image_path, os.path.join(unknown_folder_path, jpg_basename))
+
 
         ret_dict = {"message": "success", "recResult": recResult}
         return json.dumps(ret_dict)

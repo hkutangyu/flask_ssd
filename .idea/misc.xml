@@ -10,5 +10,5 @@
     <ConfirmationsSetting value="0" id="Add" />
     <ConfirmationsSetting value="0" id="Remove" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.5.2 virtualenv at /var/www/flask_ssd/flask_ssd/keras1_tf1" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.5.2 virtualenv at ~/anaconda3/envs/keras1_tf1" project-jdk-type="Python SDK" />
 </project>
