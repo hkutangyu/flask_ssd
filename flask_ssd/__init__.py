@@ -216,9 +216,9 @@ def api_get_image_class_url():
             ret = get_image_class_from_local_file(image_path)
         elif model_name == 'kingglory':
             recResult = get_image_class_by_tensorflow(image_path=image_path)
-            ret = {"message": "success", "recResult": recResult}
+            ret = json.dumps({"message": "success", "recResult": recResult})
         else:
-            ret = {"message": "model name error:{0}".format(model_name), "recResult": []}
+            ret = json.dumps({"message": "model name error:{0}".format(model_name), "recResult": []})
         return ret
 
 @app.route('/api/get_image_class_file', methods=['POST'])
