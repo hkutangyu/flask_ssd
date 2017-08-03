@@ -95,7 +95,7 @@ def get_image_class_by_tensorflow(image_path):
                     recResult.append(single_dict)
     jpg_basename = os.path.basename(image_path)
     if recResult:
-        rec_basename = os.path.splitext(jpg_basename) + '-' + recResult[0].get('imageClass') + '.jpg'
+        rec_basename = os.path.splitext(jpg_basename)[0] + '-' + recResult[0].get('imageClass') + '.jpg'
         rec_path = os.path.join(result_folder_path, rec_basename)
         shutil.copy(image_path, rec_path)
     else:
